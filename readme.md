@@ -5,8 +5,14 @@
 [![GitHub Watch](https://img.shields.io/github/forks/dengjili/java-compress.svg?style=social&label=Watch)](https://github.com/dengjili/java-compress)
 [![GitHub Star](https://img.shields.io/github/stars/dengjili/java-compress.svg?style=social&label=Star)](https://github.com/dengjili/java-compress)
 [![GitHub Fork](https://img.shields.io/github/forks/dengjili/java-compress.svg?style=social&label=Fork)](https://github.com/dengjili/java-compress)
+## 压缩算法性能测试图（仅供参考）
+![Alt](压缩性能测试图.png)
 
 ## 支持算法
+* Zlib
+
+zlib是提供数据压缩用的函式库，由Jean-loup Gailly与Mark Adler所开发。
+
 * Bzip2
 
 bzip2是Julian Seward开发并按照自由软件／开源软件协议发布的数据压缩算法及程序。Seward在1996年7月第一次公开发布了bzip2 0.15版，在随后几年中这个压缩工具稳定性得到改善并且日渐流行，Seward在2000年晚些时候发布了1.0版。bzip2比传统的gzip的压缩效率更高，但是它的压缩速度较慢。
@@ -42,41 +48,63 @@ Snappy（以前称Zippy）是Google基于LZ77的思路用C++语言编写的快�
 	CompressUtil.GZIP.uncompress(bytes)
 ```
 
-## demo
+## 测试
 ```java
-public class CompressDemo {
+package compress;
 
-	public static final String allChar = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.Random;
 
-	public static String generateString(int length) {
-		StringBuffer sb = new StringBuffer();
-		Random random = new Random();
-		for (int i = 0; i < length; i++) {
-			sb.append(allChar.charAt(random.nextInt(allChar.length())));
-		}
+import priv.dengjl.compress.util.CompressUtil;
 
-		return sb.toString();
-	}
+public class CompressTest {
 
-	public static void main(String[] args) {
-		try {
-			String data = generateString(1024 * 10);
-			System.out.println("压缩前数据内容：" + data);
-			byte[] dataBytes = data.getBytes();
-			System.out.println("压缩前数据大小：" + dataBytes.length);
+    public static final String allChar = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-			byte[] resultBytes = CompressUtil.GZIP.compress(dataBytes);
-			System.out.println("压缩后数据大小:" + resultBytes.length);
-			
-			byte[] uncompressBytes = CompressUtil.GZIP.uncompress(resultBytes);
-			System.out.println("解压后数据大小：" + uncompressBytes.length);
-			String result = new String(uncompressBytes);
-			System.out.println("解压后数据内容：" + result);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+    public static String generateString(int length) {
+        StringBuffer sb = new StringBuffer();
+        Random random = new Random();
+        for (int i = 0; i < length; i++) {
+            sb.append(allChar.charAt(random.nextInt(allChar.length())));
+        }
+
+        return sb.toString();
+    }
+
+    public static void main(String[] args) throws IOException {
+        String data = generateString(1024 * 10);
+        // System.out.println("压缩前数据内容：" + data);
+        byte[] dataBytes = data.getBytes();
+        int After=dataBytes.length;
+        System.out.println("压缩前数据大小：" + dataBytes.length);
+
+        CompressUtil[] values = CompressUtil.values();
+        for (CompressUtil compressUtil : values) {
+            System.out.println("===================: " + compressUtil.name());
+            long start = System.currentTimeMillis();
+            byte[] resultBytes = compressUtil.compress(dataBytes);
+            int Before=dataBytes.length;
+            System.out.println("压缩后数据大小:" + resultBytes.length);
+            System.out.println("压缩时间(ms)：" + (System.currentTimeMillis() - start));
+
+
+            long start2 = System.currentTimeMillis();
+            byte[] uncompressBytes = compressUtil.uncompress(resultBytes);
+            System.out.println("解压后数据大小：" + uncompressBytes.length);
+            String result = new String(uncompressBytes);
+            // System.out.println("解压后数据内容：" + result);
+            System.out.println("解压时间(ms)：" + (System.currentTimeMillis() - start2));
+
+            DecimalFormat decimalFormat = new DecimalFormat("##.00%");
+            System.out.println("压缩率"+decimalFormat.format((float)After/ (float)Before));
+            System.out.println("===================: " + compressUtil.name());
+            System.out.println();
+        }
+    }
+
 }
+
 
 ```
 
@@ -148,7 +176,18 @@ public enum CompressUtil {
 		public byte[] uncompress(byte[] data) throws IOException {
 			return compress.uncompress(data);
 		}
-	};
+	},
+    Zlib {
+        Compress compress = new AbstractZlibCompress();
+
+        public byte[] compress(byte[] data) throws IOException {
+            return compress.compress(data);
+        }
+
+        public byte[] uncompress(byte[] data) throws IOException {
+            return compress.uncompress(data);
+        }
+    };
 
 	public byte[] compress(byte[] data) throws IOException {
 		throw new AbstractMethodError();
@@ -160,3 +199,4 @@ public enum CompressUtil {
 }
 
 ```
+
